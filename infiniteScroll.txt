@@ -1,0 +1,69 @@
+# models.py
+
+class SampleData(models.Model):
+    header = models.TextField()
+    body = models.TextField()
+
+    def __str__(self):
+        return self.header
+
+# views.py
+
+def index(request):
+    return render(request, 'appReviewer/index.html')
+
+def load_more_data(request):
+    page = int(request.GET.get("page", 1))  # Get current page from request
+    per_page = 2  # Number of items per load
+    items = SampleData.objects.all()  # Fetch all items
+    paginator = Paginator(items, per_page)
+
+    try:
+        items_page = paginator.page(page)
+    except:
+        items_page = []  # No more data
+
+    return render(request, "partials/item_list.html", {"items": items_page})
+
+
+
+# urls.py
+
+    path("index/", views.index, name="index"),
+    path("load-more/", views.load_more_data, name="load_more_data"),
+
+# index.html
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Infinite Scroll with Django-HTMX</title>
+        <script src="https://unpkg.com/htmx.org@1.9.6"></script>
+    </head>
+    <body>
+
+        <h1>Items</h1>
+        <div id="item-container" hx-get="/load-more/?page=1" hx-trigger="load" hx-target="#item-container" hx-swap="beforeend">
+            <!-- Data will load here -->
+        </div>
+
+        <div id="load-more-trigger" hx-get="/load-more/?page=2" hx-trigger="revealed" hx-target="#item-container" hx-swap="beforeend">
+            <!-- This triggers loading when it appears in view -->
+        </div>
+
+    </body>
+    </html>
+
+# item_list.html
+    {% for item in items %}
+        <div class="item">
+            <h4>{{ item.header }}</p>
+            <p>{{ item.body }}</p>
+        </div>
+    {% endfor %}
+
+    {% if items.has_next %}
+        <div id="load-more-trigger" hx-get="/load-more/?page={{ items.next_page_number }}" hx-trigger="revealed" hx-target="#item-container" hx-swap="beforeend"></div>
+    {% endif %}
+
